@@ -1,0 +1,16 @@
+{
+    "name": "XRP.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:bdcae556978f2cf4596d9b12c28ce613"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
