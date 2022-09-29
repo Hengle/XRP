@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 namespace XRP.Runtime
 {
-    public class XCameraRender
+    public partial class XCameraRender
     {
         private const string BufferName = "Render Camera";
         
@@ -14,8 +14,9 @@ namespace XRP.Runtime
             {
                 name = BufferName
             };
-            
-            _FilteringSettingsOpaque = new FilteringSettings(RenderQueueRange.opaque);
+
+            _InitOpaqueGeometryRenderSetting();
+            _InitTransparentGeometryRenderSetting();
             _FilteringSettingsTransparent = new FilteringSettings(RenderQueueRange.transparent);
         }
 
@@ -80,13 +81,7 @@ namespace XRP.Runtime
         }
 
         
-        private void _DrawOpaqueGeometry()
-        {
-            var shaderTagId = new ShaderTagId("XRPForward");
-            var sortingSettings = new SortingSettings(_Camera);
-            var drawingSettings = new DrawingSettings(shaderTagId, sortingSettings);
-            _Context.DrawRenderers(_CullingResults, ref drawingSettings, ref _FilteringSettingsOpaque);
-        }
+
         
         private void _DrawSkyBox()
         {
@@ -96,13 +91,6 @@ namespace XRP.Runtime
             }
         }
 
-        private void _DrawTransparentGeometry()
-        {
-            var shaderTagId = new ShaderTagId("XRPForward");
-            var sortingSettings = new SortingSettings(_Camera);
-            var drawingSettings = new DrawingSettings(shaderTagId, sortingSettings);
-            _Context.DrawRenderers(_CullingResults, ref drawingSettings, ref _FilteringSettingsTransparent);
-        }
 
         private void _Submit()
         {
@@ -112,10 +100,6 @@ namespace XRP.Runtime
         private Camera _Camera;
         private ScriptableRenderContext _Context;
         private CullingResults _CullingResults;
-        private FilteringSettings _FilteringSettingsOpaque;
-        
-        private FilteringSettings _FilteringSettingsTransparent;
-
         private readonly CommandBuffer _CommandBuffer;
     }
 }
