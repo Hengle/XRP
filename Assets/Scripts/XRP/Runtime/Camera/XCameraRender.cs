@@ -6,8 +6,17 @@ namespace XRP.Runtime
 {
     public class XCameraRender
     {
+        private const string BufferName = "Render Camera";
+        
         public XCameraRender(XRenderPipelineAsset config)
         {
+            _CommandBuffer = new CommandBuffer()
+            {
+                name = BufferName
+            };
+            
+            _FilteringSettingsOpaque = new FilteringSettings(RenderQueueRange.opaque);
+            _FilteringSettingsTransparent = new FilteringSettings(RenderQueueRange.transparent);
         }
 
         /// <summary>
@@ -15,19 +24,41 @@ namespace XRP.Runtime
         /// </summary>
         public void RenderCamera(ScriptableRenderContext context, Camera camera)
         {
-            _Setup(context, camera);
-            _ClearRenderTarget();
-            _Culling();
-            _DrawGeometry();
-            _DrawSkyBox();
-            context.Submit();
-        }
-
-        private void _Setup(ScriptableRenderContext context, Camera camera)
-        {
             _Context = context;
             _Camera = camera;
+
+            if (!_Culling())
+            {
+                return;
+            }
             
+            _Setup(context, camera);
+            _ClearRenderTarget();
+            _BeginSample();
+            _Culling();
+            _DrawOpaqueGeometry();
+            _DrawSkyBox();
+            _DrawTransparentGeometry();
+            _EndSample();
+            _Submit();
+        }
+
+        private void _BeginSample()
+        {
+            _CommandBuffer.BeginSample(BufferName);
+            _Context.ExecuteCommandBuffer(_CommandBuffer);
+            _CommandBuffer.Clear();
+        }
+
+        private void _EndSample()
+        {
+            _CommandBuffer.EndSample(BufferName);
+            _Context.ExecuteCommandBuffer(_CommandBuffer);
+            _CommandBuffer.Clear();
+        }
+        
+        private void _Setup(ScriptableRenderContext context, Camera camera)
+        {
             _Context.SetupCameraProperties(_Camera);
         }
 
@@ -38,24 +69,23 @@ namespace XRP.Runtime
             _CommandBuffer.Clear();
         }
 
-        private void _Culling()
+        private bool _Culling()
         {
-            _Camera.TryGetCullingParameters(out var cullingParameters);
-            _CullingResults = _Context.Cull(ref cullingParameters);
+            if (_Camera.TryGetCullingParameters(out var cullingParameters))
+            {
+                _CullingResults = _Context.Cull(ref cullingParameters);
+                return true;
+            }
+            return false;
         }
 
-        private void _DrawGeometryForward()
+        
+        private void _DrawOpaqueGeometry()
         {
             var shaderTagId = new ShaderTagId("XRPForward");
             var sortingSettings = new SortingSettings(_Camera);
             var drawingSettings = new DrawingSettings(shaderTagId, sortingSettings);
-            var filteringSettings = FilteringSettings.defaultValue;
-            _Context.DrawRenderers(_CullingResults, ref drawingSettings, ref filteringSettings);
-        }
-        
-        private void _DrawGeometry()
-        {
-            _DrawGeometryForward();
+            _Context.DrawRenderers(_CullingResults, ref drawingSettings, ref _FilteringSettingsOpaque);
         }
         
         private void _DrawSkyBox()
@@ -66,10 +96,26 @@ namespace XRP.Runtime
             }
         }
 
+        private void _DrawTransparentGeometry()
+        {
+            var shaderTagId = new ShaderTagId("XRPForward");
+            var sortingSettings = new SortingSettings(_Camera);
+            var drawingSettings = new DrawingSettings(shaderTagId, sortingSettings);
+            _Context.DrawRenderers(_CullingResults, ref drawingSettings, ref _FilteringSettingsTransparent);
+        }
+
+        private void _Submit()
+        {
+            _Context.Submit();
+        }
+
         private Camera _Camera;
         private ScriptableRenderContext _Context;
         private CullingResults _CullingResults;
+        private FilteringSettings _FilteringSettingsOpaque;
         
-        private readonly CommandBuffer _CommandBuffer = new CommandBuffer();
+        private FilteringSettings _FilteringSettingsTransparent;
+
+        private readonly CommandBuffer _CommandBuffer;
     }
 }
